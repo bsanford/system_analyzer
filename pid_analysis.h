@@ -17,6 +17,7 @@
  *        required for Assignment 1
  */
 typedef struct {
+    char *path;
     pid_t pid;
     pid_t ppid;
     pid_t pgid;
@@ -38,6 +39,71 @@ typedef struct {
 }analysis_struct_t;
 
 
+
+
+
+
+
+typedef struct {
+    int                 pid;
+    char                *comm;
+    char                state;
+    int                 ppid;
+    int                 pgrp;
+    int                 session;
+    int                 tty_nr;
+    int                 tpgid;
+    unsigned int        flags;
+    unsigned long       minflt;
+    unsigned long       cminflt;
+    unsigned long       majflt;
+    unsigned long       cmajflt;
+    unsigned long       utime;
+    unsigned long       stime;
+    long                cutime;
+    long                cstime;
+    long                priority;
+    long                nice;
+    long                num_threads;
+    long                itrealvalue;
+    unsigned long long  starttime;
+    unsigned long       vsize;
+    long                rss;
+    unsigned long       rsslim;
+    unsigned long       startcode;
+    unsigned long       endcode;
+    unsigned long       startstack;
+    unsigned long       kstkesp;
+    unsigned long       kstkeip;
+    unsigned long       signal;
+    unsigned long       blocked;
+    unsigned long       sigignore;
+    unsigned long       sigcatch;
+    unsigned long       wchan;
+    unsigned long       nswap;
+    unsigned long       cnswap;
+    unsigned long       exit_signal;
+    int                 processor;
+    unsigned int        rt_priority;
+}status_struct_t;
+
+
+
+
+
+
+
+typedef struct {
+
+    unsigned long size;
+    unsigned long resident;
+    unsigned long share;
+    unsigned long text;
+    unsigned long lib;
+    unsigned long data;
+    unsigned long dt;
+
+}statm_struct_t;
 
 
 

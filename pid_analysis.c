@@ -9,8 +9,11 @@
 
 static pid_t get_maxpids(const char *max_pid_file);
 static int process_pids(analysis_struct_t *processes, pid_t max_pids);
-static int get_cmd(analysis_struct_t *process, const char *process_path);
-
+static int get_buffer(const char *process_path, char *buffer, size_t buf_size);
+int parse_cmd(analysis_struct_t *process, const char *buffer);
+static int process_cmdline(analysis_struct_t *process, char *buffer, size_t buf_size);
+static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_size);
+static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_size);
 
 
 
@@ -42,14 +45,12 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
 
         processes = malloc(sizeof(analysis_struct_t) * pid_max); //Allocate the block of memory
 
-
         printf("Calling process pids \n");
 
         if ((process_pids(processes, pid_max)) == -1) {
             fprintf(stderr, "Error processing the pid files \n");
             exit(EXIT_FAILURE); /*Not freeing anything exit does this for us */
         }
-
 
         free(mpid_file);
         exit(EXIT_SUCCESS);
@@ -74,7 +75,7 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
         DIR *proc_dir;
         struct dirent *pid_dir;
         pid_t pidval;
-        char *pid_path;
+        char *pid_path , buffer[BUF_SIZE];
 
         if ((proc_dir = opendir(PROC)) == NULL) {
             perror("Open Dir:");
@@ -92,23 +93,116 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
                 return (-1);
             }
 
-            asprintf(&pid_path, "%s/%s", PROC, pid_dir->d_name); //TODO add check
-
-
-            if ((get_cmd(&processes[pidval], pid_path)) == -1) {
-                fprintf(stderr, "Couldn't define the cmd_line parameter \n");
-                return (1);
-            }
-
             processes[pidval].pid = pidval;
-            printf("Process id %d , proces path %s, cmd = %s \n", processes[pidval].pid, pid_path,
+
+            asprintf(&(processes[pidval].path), "%s/%s", PROC, pid_dir->d_name); //Set up the proc path for pid
+
+            process_cmdline(&processes[pidval], buffer, BUF_SIZE); // Call process cmdlin
+
+            process_mstat(&processes[pidval], buffer, BUF_SIZE);
+
+            process_stat(&processes[pidval], buffer, BUF_SIZE);
+
+            printf("Process id %d , proces path %s, cmd = %s \n", processes[pidval].pid, processes[pidval].path,
                    processes[pidval].cmd);
+
             free(pid_path); //free the memory allocated from the pid path
         }
 
         return (0);
 
     }
+
+
+
+/**Function process_mstat
+ *
+ * @param process
+ * @param buffer
+ * @param buf_size
+ * @return
+ */
+static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_size){
+    char *cmd_path;
+    asprintf(&cmd_path, "%s/%s", process->path, "statm");
+
+    if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
+        fprintf(stderr, "Couldn't define the cmd_line parameter \n");
+        return (-1);
+    }
+
+    printf("stat m buffer =%s \n", buffer);
+     return(0);
+}
+
+
+
+
+
+
+
+
+/**Function process_stat
+ * @brief high level function for processing the stat file and packing
+ *        the analysis_struct_t structure.
+ *
+ * @param process
+ * @param buffer
+ * @param buf_size
+ * @return returns 0 on success -1 on error
+ */
+static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_size){
+     char *cmd_path;
+      asprintf(&cmd_path, "%s/%s", process->path, "stat");
+
+    if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
+        fprintf(stderr, "Couldn't define the cmd_line parameter \n");
+        return (-1);
+    }
+
+    printf("stat  buffer =%s \n", buffer);
+    return(0);
+}
+
+
+
+
+
+
+
+
+
+/** Function process_cmdline
+ *
+ * @brief high level function that gets a buffer with the contents of the
+ *        the /proc/<ID>/cmdline file and prcocess the contents of the buffer
+ *        into the analysis_struct_t. In this case it just copies the buffer;
+ *
+ * @param process
+ * @param buffer
+ * @param buf_size
+ * @return -1 errror 0 success
+ */
+static int process_cmdline(analysis_struct_t *process, char *buffer, size_t buf_size){
+
+    char *cmd_path;
+
+    asprintf(&cmd_path, "%s/%s", process->path, "cmdline"); //TODO add check
+
+    if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
+        fprintf(stderr, "Couldn't define the cmd_line parameter \n");
+        return (1);
+    }
+
+    if((parse_cmd(process, buffer)) == -1){
+        fprintf(stderr, "Couldn't parse the command line file \n");
+        return (-1);
+    }
+    return (0);
+}
+
+
+
 
 
 
@@ -155,44 +249,24 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
  * @param process_path process path - path to the process that we are working with
  * @return returns 0 on success -1 on failure
  */
-    static int get_cmd(analysis_struct_t *process, const char *process_path) {
+    static int get_buffer(const char *process_path, char *buffer, size_t buf_size) {
 
-        FILE *cmd_file;
-        char *cmd_file_path;
-        char buffer[BUF_SIZE];
-        size_t lnth;
+        FILE *file;
 
+        memset(buffer, '\0', buf_size);
 
-        memset(buffer, '\0', sizeof(buffer));
-
-        if ((asprintf(&cmd_file_path, "%s/cmdline", process_path)) == -1)
-            fprintf(stderr, "ERROR - Couldn't allocate cmdline file path \n");
-
-        if ((cmd_file = fopen(cmd_file_path, "r")) == NULL) {
+        if ((file = fopen(process_path, "r")) == NULL) {
             perror("Error opening cmdfile :");
-            free(cmd_file_path);
-            return (-1);
+             return (-1);
         }
 
+        fgets(buffer, buf_size, file);
 
-        fgets(buffer, sizeof(buffer), cmd_file);
-
-        if ((fclose(cmd_file)) == EOF) {
+        if ((fclose(file)) == EOF) {
             perror("Error closing command line file :");
             return (-1);
         }
 
-
-        lnth = strlen(buffer);
-        process->cmd = malloc(lnth + 1);
-
-        if (process->cmd == NULL) {
-            fprintf(stderr, "Couldn't allocate memory for cmd elment in struct");
-            return (-1);
-        }
-
-        strncpy((process->cmd), buffer, (lnth + 1));
-        free(cmd_file_path);
         return (0);
     }
 
@@ -200,30 +274,34 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
 
 
 
-/**Function get pstat
- *
- *@brief parses the pstat file located at
- *
- * @param process
- * @param pid_path
- * @return
- */
-int get_pstat(analysis_struct_t *process, const char *pid_path){
-
-    return (0);
-
-}
 
 
-/**Fucntion get_pstatm
- * @brief parses the statm file passed in via pid_path
- *
- * @param pid_path
- * @return
- */
-int get_pstatm(analysis_struct_t *process, const char *pid_path){
+
+
+
+
+int parse_cmd(analysis_struct_t *process, const char *buffer){
+    int lnth;
+
+    lnth = strlen(buffer);
+    process->cmd = malloc(lnth + 1);
+
+    if (process->cmd == NULL) {
+        fprintf(stderr, "Couldn't allocate memory for cmd elment in struct");
+        return (-1);
+    }
+
+    strncpy((process->cmd), buffer, (lnth + 1));
     return (0);
 }
 
+
+
+
+
+
+char *get_stat(char *stat_buf, int stat_loc, int stat_buf_size){
+
+}
 
 
