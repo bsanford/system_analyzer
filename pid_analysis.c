@@ -5,11 +5,6 @@
 #include <dirent.h>
 
 
-#define MAX_PID_LOC "/sys/kernel/pid_max"
-#define MAX_PID_BYTES 9 /*Assumes 64 bit max plus 1 byte for null terminator*/
-
-
-
 static pid_t get_maxpids(const char *max_pid_file);
 static int process_pids(analysis_struct_t *processes, pid_t max_pids);
 static int get_cmd(analysis_struct_t *process, const char *process_path);
@@ -57,9 +52,6 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
         exit(EXIT_SUCCESS);
 
     }
-
-
-
 
 
 

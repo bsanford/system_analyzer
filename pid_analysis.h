@@ -10,6 +10,7 @@
 
 #define PROC "/proc" /*Proc file system location */
 #define MAX_PID_LOC "/sys/kernel/pid_max" /*Location of the max pid file*/
+#define MAX_PID_BYTES 9 /*Assumes 64 bit max plus 1 byte for null terminator*/
 
 /**
  * @brief Structure for the analysis data points
