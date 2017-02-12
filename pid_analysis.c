@@ -5,9 +5,12 @@
 #include <dirent.h>
 
 
+#define BUF_SIZE 4096
+
 static pid_t get_maxpids(const char *max_pid_file);
 static int process_pids(analysis_struct_t *processes, pid_t max_pids);
 static int get_cmd(analysis_struct_t *process, const char *process_path);
+
 
 
 
@@ -156,7 +159,7 @@ static int get_cmd(analysis_struct_t *process, const char *process_path);
 
         FILE *cmd_file;
         char *cmd_file_path;
-        char buffer[4096];
+        char buffer[BUF_SIZE];
         size_t lnth;
 
 
