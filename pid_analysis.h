@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     int                 pid;
-    char                *comm;
+    char                *comm[50];
     char                state;
     int                 ppid;
     int                 pgrp;
@@ -94,14 +94,13 @@ typedef struct {
 
 
 typedef struct {
-
-    unsigned long size;
-    unsigned long resident;
-    unsigned long share;
-    unsigned long text;
-    unsigned long lib;
-    unsigned long data;
-    unsigned long dt;
+    unsigned long long  size;
+    unsigned long long  resident;
+    unsigned long long  share;
+    unsigned long long  text;
+    unsigned long long  lib;
+    unsigned long long  data;
+    unsigned long long  dt;
 
 }statm_struct_t;
 

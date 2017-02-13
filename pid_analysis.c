@@ -84,7 +84,7 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
 
         while ((pid_dir = readdir(proc_dir)) != NULL) {
 
-            if ((pidval = atoi(pid_dir->d_name)) == 0)
+            if ((pidval = atoi(pid_dir->d_name)) == 0)//Can get away with this because no process 0
                  continue;
 
 
@@ -94,14 +94,22 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
             }
 
             processes[pidval].pid = pidval;
+            asprintf(&(processes[pidval].path), "%s/%s", PROC, pid_dir->d_name);
 
-            asprintf(&(processes[pidval].path), "%s/%s", PROC, pid_dir->d_name); //Set up the proc path for pid
+            if((process_cmdline(&processes[pidval], buffer, BUF_SIZE)) == -1){ //Process cmdline proc file
+                fprintf(stderr, "Error in cmdline process \n");
+                return (-1);
+            }
 
-            process_cmdline(&processes[pidval], buffer, BUF_SIZE); // Call process cmdlin
+            if((process_mstat(&processes[pidval], buffer, BUF_SIZE)) == -1){ //Process mstat proc file
+                fprintf(stderr, "Error in mstat process \n");
+                return (-1);
+            }
 
-            process_mstat(&processes[pidval], buffer, BUF_SIZE);
-
-            process_stat(&processes[pidval], buffer, BUF_SIZE);
+            if((process_stat(&processes[pidval], buffer, BUF_SIZE))== -1){ //Process stat proce file
+                fprintf(stderr, "Error in stat process \n");
+                return (-1);
+            }
 
             printf("Process id %d , proces path %s, cmd = %s \n", processes[pidval].pid, processes[pidval].path,
                    processes[pidval].cmd);
@@ -124,14 +132,28 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
  */
 static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_size){
     char *cmd_path;
+
     asprintf(&cmd_path, "%s/%s", process->path, "statm");
+
+    statm_struct_t *mstat = malloc(sizeof(status_struct_t));
 
     if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
         fprintf(stderr, "Couldn't define the cmd_line parameter \n");
+        free(mstat);
         return (-1);
     }
 
-    printf("stat m buffer =%s \n", buffer);
+
+    if ((sscanf(buffer,"%llu%llu%llu%llu%llu%llu%llu",&(mstat->size), &(mstat->resident), &(mstat->share),
+                                                      &(mstat->text),  &(mstat->lib),
+                                                      &(mstat->data), &(mstat->dt))) == -1){
+        perror("Couldn't scanf the mstat buffer :");
+        free(mstat);
+        return (-1);
+    }
+
+    printf("mstat->size = %lld %lld\n",mstat->size, mstat->resident);
+    free(mstat);
      return(0);
 }
 
@@ -159,6 +181,7 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
         fprintf(stderr, "Couldn't define the cmd_line parameter \n");
         return (-1);
     }
+
 
     printf("stat  buffer =%s \n", buffer);
     return(0);
@@ -299,9 +322,5 @@ int parse_cmd(analysis_struct_t *process, const char *buffer){
 
 
 
-
-char *get_stat(char *stat_buf, int stat_loc, int stat_buf_size){
-
-}
 
 
