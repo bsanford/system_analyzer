@@ -159,11 +159,6 @@ static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_si
 
 
 
-
-
-
-
-
 /**Function process_stat
  * @brief high level function for processing the stat file and packing
  *        the analysis_struct_t structure.
@@ -175,25 +170,36 @@ static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_si
  */
 static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_size){
      char *cmd_path;
-      asprintf(&cmd_path, "%s/%s", process->path, "stat");
+     char *strt;
+     char *end;
+    status_struct_t *stat = malloc(sizeof(status_struct_t));
 
+    
     if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
         fprintf(stderr, "Couldn't define the cmd_line parameter \n");
         return (-1);
     }
 
+   if((sscanf(buffer, "%d", &stat->pid)) == -1){
+	fprintf(stderr, "Couldn't parse stat pid info from buffer \n");
+	return (-1);	
+   }
 
-    printf("stat  buffer =%s \n", buffer);
+   /*I used part of this to parse the comm section -> https://www.redhat.com/archives/axp-list/2001-January/msg00355.html*/
+   strt = strchr (buffer, '(') + 1;
+   end  = strchr (buffer, ')');
+   strncpy (stat->comm, strt, end-strt);
+
+   stat->comm[end-strt] = '\0';
+
+   if ((sscanf(end + 2,"%c%d%d%d",&(stat->state),&(stat->ppid), &(stat->pgrp),
+           (&stat->session))));
+
+    printf("STAT->pid = %d, STAT->comm = %s, STAT->state = %c, STAT->ppid = %d \n", stat->pid, stat->comm, stat->state, stat->ppid);
+    
+   free(stat);   
     return(0);
 }
-
-
-
-
-
-
-
-
 
 /** Function process_cmdline
  *
@@ -223,12 +229,6 @@ static int process_cmdline(analysis_struct_t *process, char *buffer, size_t buf_
     }
     return (0);
 }
-
-
-
-
-
-
 
 
 

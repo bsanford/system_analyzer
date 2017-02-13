@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     int                 pid;
-    char                *comm[50];
+    char                comm[50];
     char                state;
     int                 ppid;
     int                 pgrp;
