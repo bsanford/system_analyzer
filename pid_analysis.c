@@ -111,9 +111,6 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
                 return (-1);
             }
 
-            printf("Process id %d , proces path %s, cmd = %s \n", processes[pidval].pid, processes[pidval].path,
-                   processes[pidval].cmd);
-
             free(pid_path); //free the memory allocated from the pid path
         }
 
@@ -130,6 +127,7 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
  * @param buf_size
  * @return
  */
+
 static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_size){
     char *cmd_path;
 
@@ -140,6 +138,7 @@ static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_si
     if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
         fprintf(stderr, "Couldn't define the cmd_line parameter \n");
         free(mstat);
+        free(cmd_path);
         return (-1);
     }
 
@@ -149,13 +148,18 @@ static int process_mstat(analysis_struct_t *process, char *buffer, size_t buf_si
                                                       &(mstat->data), &(mstat->dt))) == -1){
         perror("Couldn't scanf the mstat buffer :");
         free(mstat);
+        free(cmd_path);
         return (-1);
     }
 
-    printf("mstat->size = %lld %lld\n",mstat->size, mstat->resident);
     free(mstat);
+    free(cmd_path);
      return(0);
 }
+
+
+
+
 
 
 
@@ -173,15 +177,17 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
      char *strt;
      char *end;
     status_struct_t *stat = malloc(sizeof(status_struct_t));
-
+     asprintf(&cmd_path, "%s/%s", process->path, "stat");
     
     if ((get_buffer(cmd_path, buffer, buf_size)) == -1) {
         fprintf(stderr, "Couldn't define the cmd_line parameter \n");
+        free(cmd_path);
         return (-1);
     }
 
    if((sscanf(buffer, "%d", &stat->pid)) == -1){
 	fprintf(stderr, "Couldn't parse stat pid info from buffer \n");
+    free(cmd_path);
 	return (-1);	
    }
 
@@ -192,14 +198,54 @@ static int process_stat(analysis_struct_t *process, char *buffer, size_t buf_siz
 
    stat->comm[end-strt] = '\0';
 
-   if ((sscanf(end + 2,"%c%d%d%d",&(stat->state),&(stat->ppid), &(stat->pgrp),
-           (&stat->session))));
+   sscanf(end + 2,"%c%d%d%d%d%d%u%lu%lu%lu%lu%lu%lu%ld%ld%ld"
+                       "%ld%ld%ld%llu%lu%ld%lu%lu%lu%lu%lu%lu%lu%lu%lu%lu%lu%lu%lu%d%d%u",
+                       &(stat->state),&(stat->ppid), &(stat->pgrp),&(stat->session), (&stat->tty_nr),
+                       &(stat->tpgid), &(stat->flags), &(stat->minflt),&(stat->cminflt), &(stat->majflt),
+                       &(stat->cmajflt),&(stat->utime), &(stat->stime), &(stat->cutime),&(stat->cstime),
+                       &(stat->priority), &(stat->nice), &(stat->num_threads), &(stat->itrealvalue),
+                       &(stat->starttime),&(stat->vsize),&(stat->rss), &(stat->rsslim),
+                       &(stat->startcode), &(stat->endcode),&(stat->startstack), &(stat->kstkesp),
+                       &(stat->kstkeip), &(stat->signal), &(stat->blocked), &(stat->sigignore),
+                       &(stat->sigcatch), &(stat->wchan), &(stat->nswap), &(stat->cnswap), &(stat->exit_signal),
+                       &(stat->processor),&(stat->rt_priority));
 
-    printf("STAT->pid = %d, STAT->comm = %s, STAT->state = %c, STAT->ppid = %d \n", stat->pid, stat->comm, stat->state, stat->ppid);
-    
+
+    /*TODO Should refactor to have this in its own function*/
+    process->ppid = stat->ppid;
+    process->pgid = stat->pgrp;
+    process->start_time.tv_sec   = (stat->starttime / sysconf(_SC_CLK_TCK));
+    process->cpu_sys_time.tv_sec = (stat->stime / sysconf(_SC_CLK_TCK));
+    process->cpu_use_time.tv_sec = (stat->utime / sysconf(_SC_CLK_TCK));
+    process->major_faults = stat->majflt;
+    process->minor_faults = stat->minflt;
+
+
+
+   free(cmd_path);
    free(stat);   
     return(0);
 }
+
+
+
+/**Function process status
+ *
+ * Processes the status file to get the UUIDs of the process
+ *
+ */
+
+void process_status(void){
+
+}
+
+
+
+
+
+
+
+
 
 /** Function process_cmdline
  *
@@ -229,6 +275,11 @@ static int process_cmdline(analysis_struct_t *process, char *buffer, size_t buf_
     }
     return (0);
 }
+
+
+
+
+
 
 
 
@@ -292,8 +343,6 @@ static int process_cmdline(analysis_struct_t *process, char *buffer, size_t buf_
 
         return (0);
     }
-
-
 
 
 

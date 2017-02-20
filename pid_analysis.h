@@ -21,16 +21,16 @@ typedef struct {
     pid_t pid;
     pid_t ppid;
     pid_t pgid;
-    time_t start_time;
-    long cpu_use_time;
-    long cpu_sys_time;
+    struct timespec start_time;
+    struct timespec cpu_use_time;
+    struct timespec cpu_sys_time;
     long res_set_size;
     long txt_mem_size;
-    long data_mem_size;
-    long shared_mem_size;
-    long lib_mem_size;
-    long major_faults;
-    long minor_faults;
+    unsigned long data_mem_size;
+    unsigned long shared_mem_size;
+    unsigned long lib_mem_size;
+    unsigned long major_faults;
+    unsigned long minor_faults;
     uid_t real_usr_id;
     uid_t eff_usr_id;
     gid_t real_grp_id;
@@ -46,7 +46,7 @@ typedef struct {
 
 typedef struct {
     int                 pid;
-    char                comm[50];
+    char                comm[PATH_MAX];
     char                state;
     int                 ppid;
     int                 pgrp;
@@ -82,7 +82,7 @@ typedef struct {
     unsigned long       wchan;
     unsigned long       nswap;
     unsigned long       cnswap;
-    unsigned long       exit_signal;
+    int       exit_signal;
     int                 processor;
     unsigned int        rt_priority;
 }status_struct_t;
